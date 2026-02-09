@@ -4,9 +4,7 @@ Bertille Mohring, Jonathan R. Potts, Alastair J. Wilson, Denis Réale, Richard A
 
 ## Overview
 
-This repository contains the code used in the following manuscript: Mohring B, Potts JR, Wilson AJ, Réale D, Phillips RA, Weimerskirch H, Barbraud C, Bennison A, Delord , Wood AG, Peroteau S, Rouby E, Ventura F, Patrick SC (under review in Ecology Letters) Environmental variability shapes life-history trade-offs within and between populations of a long-lived seabird
-
-The data accompanying this code will be available through NERC repository center after acceptance of the manuscript. In the meantime, the data is available in this repository.
+This repository contains the code and data used in the following manuscript: Mohring B, Potts JR, Wilson AJ, Réale D, Phillips RA, Weimerskirch H, Barbraud C, Bennison A, Delord , Wood AG, Peroteau S, Rouby E, Ventura F, Patrick SC (under review in Ecology Letters) Environmental variability shapes life-history trade-offs within and between populations of a long-lived seabird
 
 ## Data details
 
@@ -39,3 +37,4 @@ This repository contains the code used in the manuscript and supporting informat
 * *SupportingInformation\_S5.R*: Code used to produce Supporting information S5.
 * *SupportingInformation\_S6.R*: Code used to produce Supporting information S6.
 * *SupportingInformation\_S7.R*: Code used to produce Supporting information S7.
+
