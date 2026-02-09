@@ -10,10 +10,10 @@ library(robustHD)
 library(cmdstanr)
 
 # set the location of the data
-dir_data = "C:/Users/bmohring//"
+dir_data_BBAL = "C:/Users/bmohring/Documents/GitHub/BBAL-Senescence/Data/"
 
 # Open dataset
-data_BBAL = read.csv( paste0(dir_data, "data_BBAL.csv"))
+data_BBAL = read.csv( paste0(dir_data_BBAL, "data_BBAL.csv"))
 data_BBAL=data_BBAL[,-1]
 
 # scale variables
@@ -22,7 +22,7 @@ data_BBAL$Age_std = robustHD::standardize(data_BBAL$Age)
 mean_age_forStd =  mean(data_BBAL$Age) 
 sd_age_forStd =  sd(data_BBAL$Age) 
 
-
+# set priors for the model
 prior_senescence <- c(
   # Fixed effects
   prior(normal(0, 5), class = "Intercept"),
@@ -50,7 +50,7 @@ GLMM_brms_senescence=brm(ReproS   ~   Age_std  +
                          warmup = 2000,
                          iter = 4000,
                          chains =8,
-                         cores = 8,
+                         cores = 2, 
                          prior = prior_senescence,
                          backend = "cmdstanr"  ,
                          control = list(adapt_delta = 0.90)
@@ -67,9 +67,11 @@ save(GLMM_brms_senescence,
 
 
 # run model with the other population as a reference
+# change reference population
 data_BBAL$population=as.factor(data_BBAL$population)
 data_BBAL$population_refKer = relevel(data_BBAL$population , ref=2)
 
+# run model
 GLMM_brms_senescence_refKer=brm(ReproS   ~   Age_std  + 
                            I(Age_std ^2)  +
                            First_breeding_attempt +  
@@ -84,7 +86,7 @@ GLMM_brms_senescence_refKer=brm(ReproS   ~   Age_std  +
                          warmup = 2000,
                          iter = 4000,
                          chains =8,
-                         cores = 8,
+                         cores = 2,
                          prior = prior_senescence,
                          backend = "cmdstanr"  ,
                          control = list(adapt_delta = 0.90)
