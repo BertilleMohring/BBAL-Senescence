@@ -12,13 +12,12 @@ library(cmdstanr)
 library(RColorBrewer)
 library(ggplot2)
 
-
 # set the location of the data
-dir_data = "C:/Users/bmohring//"
+dir_data_BBAL = "C:/Users/bmohring/Documents/GitHub/BBAL-Senescence/Data/"
+dir_data = "C:/Users/bmohring/Documents/GitHub/BBAL-Senescence/"
+
 
 # Open dataset
-
-
 df_AgeStd_randomSlopesAndInterceptsIDlevel = read.csv( paste0(dir_data, "data_BBAL_senescence_estimates_priors.csv"))
  
 df_AgeStd_randomSlopesAndInterceptsIDlevel$cohort = substr(df_AgeStd_randomSlopesAndInterceptsIDlevel$cohortPop,1,4)
@@ -34,6 +33,7 @@ table(SubsetDead_cohortBefore2000$population)
 SubsetDead_cohortBefore2000_noOutlier  =SubsetDead_cohortBefore2000[which( SubsetDead_cohortBefore2000$OnsetSenesc_from_backTransformedCoefs<40),]
 SubsetDead_cohortBefore2000_noOutlier$SenesceRate_from_backTransformedCoefs = -SubsetDead_cohortBefore2000_noOutlier$SenesceRate_from_backTransformedCoefs
 
+# Correlation between onset and rate of senescence
 cor(SubsetDead_cohortBefore2000_noOutlier$OnsetSenesc_from_backTransformedCoefs[which(SubsetDead_cohortBefore2000_noOutlier$population=="Kerguelen")],
     SubsetDead_cohortBefore2000_noOutlier$SenesceRate_from_backTransformedCoefs[which(SubsetDead_cohortBefore2000_noOutlier$population=="Kerguelen")])
 cor(SubsetDead_cohortBefore2000_noOutlier$OnsetSenesc_from_backTransformedCoefs[which(SubsetDead_cohortBefore2000_noOutlier$population=="Bird island")],
@@ -41,6 +41,7 @@ cor(SubsetDead_cohortBefore2000_noOutlier$OnsetSenesc_from_backTransformedCoefs[
 
 
 #### Figure 4 #### 
+
 library(scales)
 
 Fig_4_A = ggplot(data = SubsetDead_cohortBefore2000_noOutlier[which(SubsetDead_cohortBefore2000_noOutlier$population=="Bird island"),], 
@@ -66,8 +67,6 @@ Fig_4_B = ggplot(data = SubsetDead_cohortBefore2000_noOutlier[which(SubsetDead_c
 Fig_4_B
 
  
-
-
 cowplot::plot_grid(Fig_4_A, Fig_4_B)
 
 
@@ -120,28 +119,42 @@ summary(GLM_KerBI_Poisson_BRM_LRS_OnsetSenescence_refKer)
 # pp_check(GLM_KerBI_Poisson_BRM_LRS_OnsetSenescence_refKer)
 # plot(GLM_KerBI_Poisson_BRM_LRS_OnsetSenescence_refKer)
 
+library(dplyr)
+
+ranges_onset <- SubsetDead_cohortBefore2000_noOutlier %>%
+  group_by(population) %>%  summarise(    xmin = min(OnsetSenescence_std),    xmax = max(OnsetSenescence_std)  )
+
+newdata_onset <- ranges_onset %>%
+  rowwise() %>%
+  do(    data.frame(      population = .$population,    OnsetSenescence_std = seq(.$xmin, .$xmax, length.out = 100)    ))
+  
+preds_onset <- fitted(  GLM_KerBI_Poisson_BRM_LRS_OnsetSenescence,
+  newdata = newdata_onset,  summary = TRUE)
+
+newdata_onset$Estimate <- preds_onset[, "Estimate"]
+newdata_onset$Q2.5     <- preds_onset[, "Q2.5"]
+newdata_onset$Q97.5    <- preds_onset[, "Q97.5"]
 
 
-Fig_4_C  = plot(conditional_effects(GLM_KerBI_Poisson_BRM_LRS_OnsetSenescence), ask = FALSE)
-Fig_4_C=Fig_4_C$`OnsetSenescence_std:population`+  
-  theme_classic() + 
-  scale_fill_manual(values = c("darkorange", "turquoise4")) + 
-  scale_color_manual(values = c("darkorange", "turquoise4")) + 
-  geom_jitter(inherit.aes = FALSE, size =1.5,
-              data = SubsetDead_cohortBefore2000_noOutlier, 
-              width = 0, height = 0.2, alpha = 0.5,
-              aes( x= OnsetSenescence_std,  y  = LRS, group  = population , col = population ))+
-  # geom_pointrange(inherit.aes = FALSE,
-  #                 data = data_summary, 
-  #                 aes( x= Age,  y  = mean_ReproS, 
-  #                      ymin = mean_ReproS -se_ReproS  , ymax  = mean_ReproS+se_ReproS ,
-  #                      group  = population , col = population ), fatten = 2)
-  xlab("Age at onset of senescence") + ylab("LRS") +
-  # geom_vline(xintercept = min(SubsetDead_cohortBefore2000_noOutlier_Ker$OnsetSenescence), linetype = "dashed", color ="turquoise4" )+
-  # geom_vline(xintercept = max(SubsetDead_cohortBefore2000_noOutlier_Ker$OnsetSenescence), linetype = "dashed", color ="turquoise4" )+
-  # geom_vline(xintercept = min(SubsetDead_cohortBefore2000_noOutlier_BI$OnsetSenescence), linetype = "dashed", color ="darkorange" )+
-  # geom_vline(xintercept = max(SubsetDead_cohortBefore2000_noOutlier_BI$OnsetSenescence), linetype = "dashed", color ="darkorange" )+
-  theme(legend.position = "none"  )
+newdata_onset$OnsetSenesc_plot <-
+  newdata_onset$OnsetSenescence_std *
+  sd(SubsetDead_cohortBefore2000_noOutlier$OnsetSenesc_from_backTransformedCoefs) +
+  mean(SubsetDead_cohortBefore2000_noOutlier$OnsetSenesc_from_backTransformedCoefs)
+
+
+Fig_4_C <- ggplot() +
+  geom_ribbon(    data = newdata_onset, aes(x = OnsetSenesc_plot, ymin = Q2.5, ymax = Q97.5, fill = population    ),
+    alpha = 0.3  ) +
+  geom_line(    data = newdata_onset, aes(x = OnsetSenesc_plot, y = Estimate, color = population    ),
+    linewidth = 1  ) +
+  geom_jitter(    data = SubsetDead_cohortBefore2000_noOutlier,    aes(      x = OnsetSenesc_from_backTransformedCoefs,      y = LRS,      color = population    ),
+    width = 0,    height = 0.2,    alpha = 0.5,    size = 1.5  ) +
+  scale_fill_manual(values = c("darkorange", "turquoise4")) +
+  scale_color_manual(values = c("darkorange", "turquoise4")) +
+  theme_classic() +
+  xlab("Age at onset of senescence") +
+  ylab("LRS") +
+  theme(legend.position = "none")
 
 Fig_4_C
 
@@ -175,90 +188,53 @@ GLM_KerBI_Poisson_BRM_LRS_SenesceRate_refKer  = brm(LRS   ~   SenesceRate_std * 
 
 summary(GLM_KerBI_Poisson_BRM_LRS_SenesceRate_refKer) 
 
-# pp_check(GLM_KerBI_Poisson_BRM_LRS_SenesceRate)
+ranges <- SubsetDead_cohortBefore2000_noOutlier %>%
+  group_by(population) %>%
+  summarise(    xmin = min(SenesceRate_std),    xmax = max(SenesceRate_std)
+  )
+newdata <- ranges %>%
+  rowwise() %>%
+  do(    data.frame(      population = .$population, SenesceRate_std = seq(.$xmin, .$xmax, length.out = 100)
+    )
+  )
+preds <- fitted(  GLM_KerBI_Poisson_BRM_LRS_SenesceRate,  newdata = newdata,  summary = TRUE
+)
 
-Fig_4_D  = plot(conditional_effects(GLM_KerBI_Poisson_BRM_LRS_SenesceRate), ask = FALSE)
-Fig_4_D = Fig_4_D$`SenesceRate_std:population`+  
-  theme_classic() + 
-  scale_fill_manual(values = c("darkorange", "turquoise4")) + 
-  scale_color_manual(values = c("darkorange", "turquoise4")) + 
-  geom_jitter(inherit.aes = FALSE, size =1.5,
-              data = SubsetDead_cohortBefore2000_noOutlier, 
-              width = 0, height = 0.2, alpha = 0.5,
-              aes( x= SenesceRate_std,  y  = LRS, group  = population , col = population ))+
-  # geom_pointrange(inherit.aes = FALSE,
-  #                 data = data_summary, 
-  #                 aes( x= Age,  y  = mean_ReproS, 
-  #                      ymin = mean_ReproS -se_ReproS  , ymax  = mean_ReproS+se_ReproS ,
-  #                      group  = population , col = population ), fatten = 2)
-  xlab("Senescence rate") + ylab("LRS")+
-  # geom_vline(xintercept = min(SubsetDead_cohortBefore2000_noOutlier_Ker$SenesceRate), linetype = "dashed", color ="turquoise4" )+
-  # geom_vline(xintercept = max(SubsetDead_cohortBefore2000_noOutlier_Ker$SenesceRate), linetype = "dashed", color ="turquoise4" )+
-  # geom_vline(xintercept = min(SubsetDead_cohortBefore2000_noOutlier_BI$SenesceRate), linetype = "dashed", color ="darkorange" )+
-  # geom_vline(xintercept = max(SubsetDead_cohortBefore2000_noOutlier_BI$SenesceRate), linetype = "dashed", color ="darkorange" )+
-  theme(legend.position = "none"  )
+newdata$Estimate <- preds[, "Estimate"]
+newdata$Q2.5     <- preds[, "Q2.5"]
+newdata$Q97.5    <- preds[, "Q97.5"]
+
+newdata$SenesceRate_plot <-
+  newdata$SenesceRate_std *
+  sd(SubsetDead_cohortBefore2000_noOutlier$SenesceRate_from_backTransformedCoefs) +
+  mean(SubsetDead_cohortBefore2000_noOutlier$SenesceRate_from_backTransformedCoefs)
+
+
+Fig_4_D = ggplot() +
+  geom_ribbon(    data = newdata,    aes( x = SenesceRate_plot, ymin = Q2.5, ymax = Q97.5, fill = population    ),
+    alpha = 0.3  ) +
+  geom_line(    data = newdata,    aes( x = SenesceRate_plot, y = Estimate, color = population    ),
+    linewidth = 1  ) +
+  geom_jitter(    data = SubsetDead_cohortBefore2000_noOutlier,   
+                  aes(  x = SenesceRate_from_backTransformedCoefs, y = LRS, color = population ),
+    width = 0,    height = 0.2,    alpha = 0.5,    size = 1.5) +
+  scale_fill_manual(values = c("darkorange", "turquoise4")) +
+  scale_color_manual(values = c("darkorange", "turquoise4")) +
+  theme_classic() +
+  xlab("Senescence rate") +
+  ylab("LRS") +
+  theme(legend.position = "none")
 Fig_4_D
 
 cowplot::plot_grid(Fig_4_A,
                    Fig_4_B, 
                    Fig_4_C,
                    Fig_4_D, 
+                   align="hv",
                    ncol = 2, labels = c("A", "B", "C", "D"))
 
 
+ggsave(paste0(dir_data, "Figure4.png" ))
 
 
 
-
-
-
-
-
-Fig_4_C_v2 =  ggplot(data = SubsetDead_cohortBefore2000_noOutlier[which(SubsetDead_cohortBefore2000_noOutlier$population=="Kerguelen"),], 
-                     aes(x= OnsetSenesc_from_backTransformedCoefs,  y  = LRS ))+
-  geom_jitter(inherit.aes = FALSE, size =1.5,
-              data = SubsetDead_cohortBefore2000_noOutlier, 
-              width = 0, height = 0.2, alpha = 0.4,
-              aes( x= OnsetSenesc_from_backTransformedCoefs,  y  = LRS, group  = population , col = population ))+
-  scale_fill_manual(values = c("darkorange", "turquoise4")) + 
-  scale_color_manual(values = c("darkorange", "turquoise4")) + 
-  geom_smooth(method = "glm", method.args = list(family = "poisson"), col ="turquoise4", fill ="turquoise4" )+ 
-  geom_smooth(inherit.aes = FALSE,  
-              data = SubsetDead_cohortBefore2000_noOutlier[which(SubsetDead_cohortBefore2000_noOutlier$population=="Bird island"),],
-              aes(x= OnsetSenesc_from_backTransformedCoefs,  y  = LRS ),
-              method = "glm", method.args = list(family = "poisson"), col ="darkorange", fill ="darkorange" )+
-  xlab("Age at onset of senescence") + ylab("LRS")+
-  theme_classic()+
-  theme(legend.position = "none"  )
-
-Fig_4_C_v2
- 
-Fig_4_D_v2 =  ggplot(data = SubsetDead_cohortBefore2000_noOutlier[which(SubsetDead_cohortBefore2000_noOutlier$population=="Kerguelen"),], 
-                     aes(x= SenesceRate_from_backTransformedCoefs,  y  = LRS ))+
-  geom_jitter(inherit.aes = FALSE, size =1.5,
-              data = SubsetDead_cohortBefore2000_noOutlier, 
-              width = 0, height = 0.2, alpha = 0.4,
-              aes( x= SenesceRate_from_backTransformedCoefs,  y  = LRS, group  = population , col = population ))+
-  scale_fill_manual(values = c("darkorange", "turquoise4")) + 
-  scale_color_manual(values = c("darkorange", "turquoise4")) + 
-  geom_smooth(method = "glm", method.args = list(family = "poisson"), col ="turquoise4", fill ="turquoise4" )+ 
-  geom_smooth(inherit.aes = FALSE,  
-              data = SubsetDead_cohortBefore2000_noOutlier[which(SubsetDead_cohortBefore2000_noOutlier$population=="Bird island"),],
-              aes(x= SenesceRate_from_backTransformedCoefs,  y  = LRS ),
-              method = "glm", method.args = list(family = "poisson"), col ="darkorange", fill ="darkorange" )+
-  xlab("Senescence rate") + ylab("LRS")+
-  theme_classic()+
-  theme(legend.position = "none"  )
-
-Fig_4_D_v2
-
-cowplot::plot_grid(Fig_4_A,
-                   Fig_4_B, 
-                   Fig_4_C_v2,
-                   Fig_4_D_v2, 
-                   align="hv",
-                   ncol = 2, labels = c("A", "B", "C", "D"),  label_size = 12)
-
-
-
-ggsave(paste0(dir_data, "Appendix4_Figure1.png" ))

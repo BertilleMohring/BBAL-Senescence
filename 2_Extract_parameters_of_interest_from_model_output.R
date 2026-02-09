@@ -1,8 +1,6 @@
 #### Extract parameters of interest (senescence rate and onset of senescence) from model output ####
 
-
 # Load packages
-
 library(brms)
 library(rstan)
 library(StanHeaders)
@@ -12,9 +10,10 @@ library(cmdstanr)
 library(RColorBrewer)
 library(ggplot2)
 
-
 # set the location of the data
-dir_data = "C:/Users/bmohring//"
+dir_data_BBAL = "C:/Users/bmohring/Documents/GitHub/BBAL-Senescence/Data/"
+dir_data = "C:/Users/bmohring/Documents/GitHub/BBAL-Senescence/"
+
 
 # Load functions used later
 back_trans_intercept<-function(b0, b1, b2, mean, sd){
@@ -41,7 +40,7 @@ back_trans_fun<-function(x, b0, b1, b2, mean, sd){
 
 # Open dataset
 
-data_BBAL = paste0(dir_data, "data_BBAL.csv")
+data_BBAL = read.csv( paste0(dir_data_BBAL, "data_BBAL.csv"))
 data_BBAL=data_BBAL[,-1]
 
 # Load model output
@@ -51,7 +50,6 @@ load( paste0(dir_data, "model_output_GLMM_senescence_priors.RData"))
 # calculate age mean and sd
 mean_age_forStd =  mean(data_BBAL$Age) 
 sd_age_forStd =  sd(data_BBAL$Age) 
-
 
 length(data_BBAL$population)
 
@@ -101,7 +99,7 @@ for (k in 1:length(unique(Random_AgeStd_Intercept_ID$ID))){
 }
  
 # random slopes on linear age effect
-# extract the slope for each individaul
+# extract the slope for each individual
 Random_AgeStd_Slope_ID=  ranef(GLMM_brms_senescence)$ID[, , "Age_std"] 
 
 Random_AgeStd_Slope_ID = as.data.frame(Random_AgeStd_Slope_ID)
@@ -276,8 +274,6 @@ write.csv(df_AgeStd_randomSlopesAndInterceptsIDlevel,
 
 
 
-
-
 #### __ calculate parameters of interest from posterior distribution #### 
 
 #extract posterior values from the model
@@ -391,6 +387,7 @@ df_plotRes_Senescence$SenesceRate_from_backTransformedCoefs<-gradmins
 
 # multiply senescence rate value by -1 so that higher values correspond to stronger senescence rate
 df_plotRes_Senescence$SenesceRate_from_backTransformedCoefs = -df_plotRes_Senescence$SenesceRate_from_backTransformedCoefs
+
 
 #### ____ Save output #### 
 write.csv(df_plotRes_Senescence,

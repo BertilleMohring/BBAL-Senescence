@@ -1,33 +1,29 @@
+#### Code used to produce Figure 2 ####
 
 # Load packages
 library(ggplot2)
 library(ggdist)
 
-
 # set the location of the data
-dir_data = "C:/Users/bmohring//"
-
+dir_data_BBAL = "C:/Users/bmohring/Documents/GitHub/BBAL-Senescence/Data/"
+dir_data = "C:/Users/bmohring/Documents/GitHub/BBAL-Senescence/"
 
 # Open dataset
- 
-
 df_AgeStd_randomSlopesAndInterceptsIDlevel = read.csv( paste0(dir_data, "data_BBAL_senescence_estimates_priors.csv"))
 df_plotRes_Senescence = read.csv( paste0(dir_data, "data_BBAL_senescence_posteriorEstimates_priors.csv"))
 
-data_BBAL = read.csv(  paste0(dir_data, "data_BBAL.csv"))
+data_BBAL = read.csv(  paste0(dir_data_BBAL, "data_BBAL.csv"))
 data_BBAL=data_BBAL[,-1]
 
 # Load model output
-load(paste0(dir_data, "model_output_GLMM_senescence_priors.RData"))
-
+# load(paste0(dir_data, "model_output_GLMM_senescence_priors.RData"))
 
 # calculate age mean and sd
 mean_age_forStd =  mean(data_BBAL$Age) 
 sd_age_forStd =  sd(data_BBAL$Age) 
 
 
-#### Figure 2 #### 
-
+#### 3. Figure 2 #### 
 
 # Desired raw age breaks
 raw_breaks <- c(5, 10, 15, 20, 25, 30, 35, 40, 45,50)
@@ -149,9 +145,5 @@ cowplot::plot_grid(pA,
                    labels = c("A"))
 
 
-ggsave(paste0(dir_data, "Figure2_prior.png"))
-
-
-
-
+ggsave(paste0(dir_data, "Figure2.png"))
 
